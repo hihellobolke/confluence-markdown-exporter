@@ -13,9 +13,11 @@ import urllib.parse
 from collections.abc import Set
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
+from datetime import datetime
 from os import PathLike
 from pathlib import Path
 from string import Template
+from turtle import title
 from typing import Literal
 from typing import TypeAlias
 from typing import cast
@@ -938,6 +940,8 @@ class Page(Document):
         def markdown(self) -> str:
             md_body = self.convert(self.page.html)
             markdown = f"{self.front_matter}\n"
+            if settings.export.page_metdata:
+                markdown += f"{self.page_metadata}\n"
             if settings.export.page_breadcrumbs:
                 markdown += f"{self.breadcrumbs}\n"
             markdown += f"{md_body}\n"
@@ -964,6 +968,22 @@ class Page(Document):
                 )
                 + "\n"
             )
+
+        @property
+        def page_metadata(self) -> dict[str, str | list[str]]:
+            # metadata as dict of str keys and str values or list of str values (e.g. for tags)
+            pm: dict[str, str | list[str]] = {}
+            pm["id"] = str(self.page.id)
+            pm["source"] = f"{self.page.base_url}/rest/api/content/{self.page.id}"
+            pm["title"] = self.page.title
+            pm["description"] = ""
+            pm["tags"] = self.labels
+            pm["author"] = self.convert_user(self.page.version.by)
+            pm["created"] = self.page.version.when
+            pm["ancestors"] = [
+                self.convert_page_link(ancestor.id) for ancestor in self.page.ancestors
+            ]
+            return pm
 
         @property
         def labels(self) -> list[str]:

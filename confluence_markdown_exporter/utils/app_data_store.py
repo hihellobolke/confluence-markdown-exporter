@@ -378,6 +378,11 @@ class ExportConfig(BaseModel):
             "\nNote: large and multiple attachments will take more time"
         ),
     )
+    page_metadata: bool = Field(
+        default=True,
+        title="Page Metadata",
+        description="Whether to include metadata at the top of the page.",
+    )
     page_breadcrumbs: bool = Field(
         default=True,
         title="Page Breadcrumbs",
