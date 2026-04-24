@@ -20,6 +20,7 @@ from string import Template
 from turtle import title
 from typing import Literal
 from typing import TypeAlias
+from typing import Union
 from typing import cast
 from urllib.parse import unquote
 from urllib.parse import urlparse
@@ -939,9 +940,9 @@ class Page(Document):
         @property
         def markdown(self) -> str:
             md_body = self.convert(self.page.html)
-            markdown = f"{self.front_matter}\n"
-            if settings.export.page_metdata:
-                markdown += f"{self.page_metadata}\n"
+            markdown = ""
+            markdown += f"{self.page_metadata}\n"
+            markdown += f"{self.front_matter}\n"
             if settings.export.page_breadcrumbs:
                 markdown += f"{self.breadcrumbs}\n"
             markdown += f"{md_body}\n"
@@ -969,10 +970,23 @@ class Page(Document):
                 + "\n"
             )
 
+        def _quote_if_needed(self, value: str) -> str:
+            # Quote if more than one word or contains spaces
+            if " " in value:
+                return f'"{value}"'
+            return value
+
+        def _dict_to_yaml(self, doc: dict) -> str:
+            lines = ["---"]
+            doc_as_yaml = yaml.dump(doc)
+            lines.extend(doc_as_yaml.strip().splitlines())
+            lines.append("---")
+            return "\n".join(lines)
+
         @property
-        def page_metadata(self) -> dict[str, str | list[str]]:
+        def page_metadata(self) -> str:
             # metadata as dict of str keys and str values or list of str values (e.g. for tags)
-            pm: dict[str, str | list[str]] = {}
+            pm = {}
             pm["id"] = str(self.page.id)
             pm["source"] = f"{self.page.base_url}/rest/api/content/{self.page.id}"
             pm["title"] = self.page.title
@@ -983,7 +997,8 @@ class Page(Document):
             pm["ancestors"] = [
                 self.convert_page_link(ancestor.id) for ancestor in self.page.ancestors
             ]
-            return pm
+            logger.debug("Page metadata for page id=%s: %s", self.page.id, pm)
+            return self._dict_to_yaml(pm)
 
         @property
         def labels(self) -> list[str]:
